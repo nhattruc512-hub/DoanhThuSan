@@ -37,6 +37,35 @@
         <span>Thời gian đã làm</span>
         <strong id="elapsedTime">00:00:00</strong>
       </div>
+
+      <div style="margin-top:18px">
+        <p class="section-kicker">NHẬP DOANH THU TRONG CA</p>
+        <p class="muted" style="margin-top:4px">Nhân viên có thể cập nhật bất cứ lúc nào. Số liệu được tự lưu trên thiết bị.</p>
+        <div class="money-grid" style="margin-top:12px">
+          <label>
+            <span>🏦 Chuyển khoản</span>
+            <input id="liveTransfer" class="input live-money-input" inputmode="numeric" placeholder="0" />
+          </label>
+          <label>
+            <span>💵 Tiền mặt</span>
+            <input id="liveCash" class="input live-money-input" inputmode="numeric" placeholder="0" />
+          </label>
+          <label>
+            <span>🏸 Doanh thu sân</span>
+            <input id="liveCourt" class="input live-money-input" inputmode="numeric" placeholder="0" />
+          </label>
+          <label>
+            <span>🥤 Doanh thu nước</span>
+            <input id="liveWater" class="input live-money-input" inputmode="numeric" placeholder="0" />
+          </label>
+        </div>
+        <div class="reconcile-box" style="margin-top:12px">
+          <div><span>Tổng tiền thu</span><b id="liveCollectedTotal">0 ₫</b></div>
+          <div><span>Tổng doanh thu</span><b id="liveRevenueTotal">0 ₫</b></div>
+          <div class="difference-row"><span>Chênh lệch</span><b id="liveDifferenceTotal">0 ₫</b></div>
+        </div>
+      </div>
+
       <button id="openEndShiftBtn" class="btn btn-danger btn-block" type="button">KẾT THÚC CA</button>
     </section>
 
