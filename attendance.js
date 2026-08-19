@@ -1,10 +1,10 @@
 // Independent shared attendance module with geolocation and date history.
 (function(){
   const CLOUD_URL='https://dinqlgaveujdeyisgpty.supabase.co';
-  const CLOUD_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpbnFsZ2F2ZXVqZGV5aXNncHR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxMjQxNzAsImV4cCI6MjEwMjcwMDE3MH0.L5aitJLmaGC4yopIzjwkQomwQ0H9dSOfNWqvAgwrzQI';
+  const CLOUD_KEY='sb_publishable_xFCEf-YDU-F8PJfuoxHD-Q_NlFAWl9N';
   const ATTENDANCE_TABLE='staff_attendance_records';
   const VI_TIME_ZONE='Asia/Ho_Chi_Minh';
-  const headers={apikey:CLOUD_KEY,Authorization:`Bearer ${CLOUD_KEY}`,'Content-Type':'application/json'};
+  const headers={apikey:CLOUD_KEY,'Content-Type':'application/json'};
   let rows=[];let loading=false;
 
   const el=id=>document.getElementById(id);
@@ -56,7 +56,7 @@
     if(loading)return;const employee=el('attendanceEmployee').value.trim()||localStorage.getItem('r971_staff_employee_v1')||'';if(!employee)return notify('Nhập tên nhân viên trước khi chấm công');
     const now=new Date(),parts=hcm(now),s=shiftFor(parts);if(!s)return notify('Hiện đang ngoài giờ chấm công');loading=true;el('attendancePunchBtn').disabled=true;
     try{notify('Đang lấy vị trí chấm công...');const pos=await position();const row={employee:employee.slice(0,60),punched_at:now.toISOString(),date_key:dateKey(parts),shift_key:s.key,shift_name:s.name,scheduled_start:s.startText+':00',scheduled_end:s.endText+':00',status:s.status,late_minutes:s.lateMinutes,latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy_m:pos.coords.accuracy};
-      const r=await fetch(`${CLOUD_URL}/rest/v1/${ATTENDANCE_TABLE}`,{method:'POST',headers:{...headers,Prefer:'return=representation'},body:JSON.stringify(row)});const txt=await r.text();if(r.status===409)throw new Error('Bạn đã chấm công ca này hôm nay rồi');if(!r.ok)throw new Error(txt||'Không lưu được chấm công');localStorage.setItem('r971_staff_employee_v1',employee);el('attendanceDate').value=row.date_key;showResult((txt?JSON.parse(txt):[row])[0]||row);await load();notify(s.status==='late'?`Đã chấm công · Trễ ${s.lateMinutes} phút`:'Đã chấm công đúng giờ');
+      const r=await fetch(`${CLOUD_URL}/rest/v1/${ATTENDANCE_TABLE}`,{method:'POST',headers:{...headers,Prefer:'return=representation'},body:JSON.stringify(row)});const txt=await r.text();if(r.status===409)throw new Error('Bạn đã chấm công ca này hôm nay rồi');if(!r.ok)throw new Error(`Máy chủ ${r.status}: ${txt||'Không lưu được chấm công'}`);localStorage.setItem('r971_staff_employee_v1',employee);el('attendanceDate').value=row.date_key;showResult((txt?JSON.parse(txt):[row])[0]||row);await load();notify(s.status==='late'?`Đã chấm công · Trễ ${s.lateMinutes} phút`:'Đã chấm công đúng giờ');
     }catch(err){if(typeof err.code==='number')notify(err.code===1?'Bạn cần cho phép truy cập vị trí để chấm công':err.code===2?'Không xác định được vị trí':'Lấy vị trí quá lâu, hãy thử lại');else notify('Chấm công lỗi: '+(err.message||'Không xác định'))}finally{loading=false;el('attendancePunchBtn').disabled=false}
   }
   function showResult(r){const b=el('attendanceMessage');if(!b)return;const late=r.status==='late';b.className=`attendance-result ${late?'late':'ok'}`;const loc=hasLoc(r)?`<a href="${mapUrl(r)}" target="_blank" rel="noopener">📍 ${locText(r)}</a>`:`<span>📍 ${locText(r)}</span>`;b.innerHTML=`<div><b>${late?`⚠ TRỄ ${r.late_minutes} PHÚT`:'✓ CHẤM CÔNG ĐÚNG GIỜ'}</b><span>${esc(r.employee)} · ${esc(r.shift_name)}</span></div><div><b>${timeText(r.punched_at)}</b>${loc}</div>`}
