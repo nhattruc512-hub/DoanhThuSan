@@ -96,6 +96,7 @@ async function syncSharedData(){
     if(localDebts.length)await upsertDebts(localDebts);
 
     renderSummary();renderHistory();renderDebts();
+    if(typeof renderManagerShifts==='function')renderManagerShifts();
     console.info('Đã đồng bộ dữ liệu dùng chung');
   }catch(err){
     console.error('Không thể tải dữ liệu dùng chung:',err);
@@ -105,3 +106,8 @@ async function syncSharedData(){
 
 syncSharedData();
 setInterval(syncSharedData,30000);
+
+// Load the manager area after shared-data helpers are available.
+const managerScript=document.createElement('script');
+managerScript.src='./admin.js';
+document.body.appendChild(managerScript);
