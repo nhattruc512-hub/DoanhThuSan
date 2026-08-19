@@ -147,6 +147,43 @@
       </div>
     </section>
 
+    <section class="card debt-card">
+      <div class="card-head compact">
+        <div>
+          <p class="section-kicker">KHÁCH NỢ</p>
+          <h2>Theo dõi công nợ khách</h2>
+          <p class="muted">Khoản nợ được lưu riêng và không cộng vào doanh thu hoặc tiền đã thu.</p>
+        </div>
+        <div style="text-align:right">
+          <small class="muted">TỔNG ĐANG NỢ</small>
+          <div id="debtGrandTotal" style="font-size:22px;font-weight:900;margin-top:4px">0 ₫</div>
+        </div>
+      </div>
+
+      <div class="money-grid" style="margin-top:12px">
+        <label>
+          <span>👤 Tên khách</span>
+          <input id="debtCustomer" class="input" type="text" maxlength="80" placeholder="Nhập tên khách" />
+        </label>
+        <label>
+          <span>📝 Nợ gì</span>
+          <input id="debtReason" class="input" type="text" maxlength="160" placeholder="Ví dụ: tiền sân, nước..." />
+        </label>
+        <label>
+          <span>💰 Tổng nợ</span>
+          <input id="debtAmount" class="input debt-money-input" inputmode="numeric" placeholder="0" />
+        </label>
+      </div>
+
+      <button id="addDebtBtn" class="btn btn-primary btn-block" type="button">+ THÊM KHÁCH NỢ</button>
+
+      <div id="debtList" style="margin-top:14px"></div>
+      <div id="emptyDebtList" class="empty-state" style="padding:18px 8px">
+        <b>Chưa có khách nợ</b>
+        <p>Các khoản nợ chưa thanh toán sẽ xuất hiện ở đây.</p>
+      </div>
+    </section>
+
     <section class="card history-card">
       <div class="card-head compact">
         <div>
