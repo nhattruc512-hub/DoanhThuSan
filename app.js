@@ -3,7 +3,12 @@ const SHIFTS={
   ca2:{key:'ca2',name:'Ca 2',time:'14:00 - 18:00'},
   ca3:{key:'ca3',name:'Ca 3',time:'18:00 - 22:00'}
 };
-const STORAGE={active:'r971_staff_active_shift_v1',history:'r971_staff_shift_history_v1',employee:'r971_staff_employee_v1'};
+const STORAGE={
+  active:'r971_staff_active_shift_v1',
+  history:'r971_staff_shift_history_v1',
+  employee:'r971_staff_employee_v1',
+  debts:'r971_staff_customer_debts_v1'
+};
 const $=id=>document.getElementById(id);
 const currency=new Intl.NumberFormat('vi-VN',{style:'currency',currency:'VND',maximumFractionDigits:0});
 let selectedShift=null,elapsedTimer=null,deferredPrompt=null;
@@ -23,6 +28,8 @@ function vnTime(iso){
 function money(n){return currency.format(Number(n)||0)}
 function readHistory(){try{return JSON.parse(localStorage.getItem(STORAGE.history)||'[]')}catch{return []}}
 function saveHistory(items){localStorage.setItem(STORAGE.history,JSON.stringify(items))}
+function readDebts(){try{return JSON.parse(localStorage.getItem(STORAGE.debts)||'[]')}catch{return []}}
+function saveDebts(items){localStorage.setItem(STORAGE.debts,JSON.stringify(items))}
 function getActive(){
   try{
     const active=JSON.parse(localStorage.getItem(STORAGE.active)||'null');
@@ -48,6 +55,7 @@ function parseMoney(value){return Number(String(value||'').replace(/\D/g,''))||0
 function formatMoneyInput(el){const n=parseMoney(el.value);el.value=n?new Intl.NumberFormat('vi-VN').format(n):''}
 function setMoneyInput(id,value){const el=$(id);if(el)el.value=Number(value||0)?new Intl.NumberFormat('vi-VN').format(Number(value||0)):''}
 function clearEntryInputs(){['entryTransfer','entryCash','entryCourt','entryWater'].forEach(id=>{if($(id))$(id).value=''})}
+function clearDebtInputs(){['debtCustomer','debtReason','debtAmount'].forEach(id=>{if($(id))$(id).value=''})}
 function toast(message){const t=$('toast');t.textContent=message;t.classList.add('show');clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove('show'),2600)}
 function escapeHtml(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 
@@ -171,6 +179,62 @@ function renderEntryList(active=getActive()){
     </div>`;
   }).join('');
 }
+
+function addDebt(){
+  const active=getActive();
+  if(!active)return toast('Hãy bắt đầu ca trước khi ghi khách nợ');
+  const customer=$('debtCustomer').value.trim();
+  const reason=$('debtReason').value.trim();
+  const amount=parseMoney($('debtAmount').value);
+  if(!customer)return toast('Nhập tên khách');
+  if(!reason)return toast('Nhập khách nợ gì');
+  if(!amount)return toast('Nhập tổng nợ');
+  const debt={
+    id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),
+    createdAt:new Date().toISOString(),
+    dateKey:localDateKey(),
+    customer:customer.slice(0,80),
+    reason:reason.slice(0,160),
+    amount,
+    employee:active.employee,
+    shiftKey:active.shiftKey,
+    shiftName:active.shiftName
+  };
+  const debts=readDebts();
+  debts.unshift(debt);
+  saveDebts(debts);
+  clearDebtInputs();
+  renderDebts();
+  toast('Đã thêm khách nợ');
+}
+function deleteDebt(id){
+  const debts=readDebts();
+  const debt=debts.find(x=>x.id===id);if(!debt)return;
+  if(!confirm(`Xóa khoản nợ của ${debt.customer}?`))return;
+  saveDebts(debts.filter(x=>x.id!==id));
+  renderDebts();
+  toast('Đã xóa khoản nợ');
+}
+function renderDebts(){
+  const debts=readDebts();
+  const total=debts.reduce((sum,x)=>sum+Number(x.amount||0),0);
+  $('debtGrandTotal').textContent=money(total);
+  $('emptyDebtList').classList.toggle('hidden',debts.length>0);
+  $('debtList').innerHTML=debts.map(d=>`<div class="card" style="padding:13px;margin:9px 0;background:#fffaf0;border-color:#fed7aa">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
+      <div style="min-width:0">
+        <div style="font-size:17px;font-weight:900">${escapeHtml(d.customer)}</div>
+        <div class="muted" style="margin-top:4px">Nợ: <b>${escapeHtml(d.reason)}</b></div>
+        <div class="muted" style="margin-top:4px">${vnDateShort(d.createdAt)} · ${vnTime(d.createdAt)} · ${escapeHtml(d.employee||'')} · ${escapeHtml(d.shiftName||'')}</div>
+      </div>
+      <div style="text-align:right;flex:0 0 auto">
+        <div style="font-size:18px;font-weight:900;color:#b45309">${money(d.amount)}</div>
+        <button type="button" class="btn btn-secondary" style="padding:7px 10px;margin-top:8px" onclick="deleteDebt('${d.id}')">Xóa</button>
+      </div>
+    </div>
+  </div>`).join('');
+}
+
 function openEndDialog(){
   const active=getActive();if(!active)return;
   const t=active.totals||{};
@@ -237,7 +301,7 @@ function exportCsv(){
   const csv='\ufeff'+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`971-doanh-thu-${date}-${shift}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-function render(){renderActive();renderSummary();renderHistory();updateStartButton()}
+function render(){renderActive();renderSummary();renderDebts();renderHistory();updateStartButton()}
 
 function setup(){
   const today=localDateKey();$('todayLabel').textContent=vnDate();$('summaryDate').value=today;$('historyDate').value=today;$('employeeName').value=localStorage.getItem(STORAGE.employee)||'';
@@ -245,10 +309,14 @@ function setup(){
   $('employeeName').addEventListener('input',updateStartButton);
   $('startShiftBtn').addEventListener('click',beginShift);
   $('addEntryBtn').addEventListener('click',addEntry);
+  $('addDebtBtn').addEventListener('click',addDebt);
   $('openEndShiftBtn').addEventListener('click',openEndDialog);
   $('closeDialogBtn').addEventListener('click',closeEndDialog);
   $('endShiftForm').addEventListener('submit',finishShift);
   document.querySelectorAll('.entry-money-input').forEach(el=>{el.addEventListener('input',()=>formatMoneyInput(el));el.addEventListener('focus',()=>el.select());el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addEntry()}})});
+  $('debtAmount').addEventListener('input',()=>formatMoneyInput($('debtAmount')));
+  $('debtAmount').addEventListener('focus',()=>$('debtAmount').select());
+  $('debtAmount').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addDebt()}});
   $('summaryDate').addEventListener('change',renderSummary);$('historyDate').addEventListener('change',renderHistory);$('historyShift').addEventListener('change',renderHistory);$('exportBtn').addEventListener('click',exportCsv);
   $('endShiftDialog').addEventListener('click',e=>{if(e.target===$('endShiftDialog'))closeEndDialog()});
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('installBtn').classList.remove('hidden')});
