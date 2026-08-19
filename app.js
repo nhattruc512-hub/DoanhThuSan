@@ -23,11 +23,31 @@ function vnTime(iso){
 function money(n){return currency.format(Number(n)||0)}
 function readHistory(){try{return JSON.parse(localStorage.getItem(STORAGE.history)||'[]')}catch{return []}}
 function saveHistory(items){localStorage.setItem(STORAGE.history,JSON.stringify(items))}
-function getActive(){try{return JSON.parse(localStorage.getItem(STORAGE.active)||'null')}catch{return null}}
+function getActive(){
+  try{
+    const active=JSON.parse(localStorage.getItem(STORAGE.active)||'null');
+    return active?normalizeActive(active):null;
+  }catch{return null}
+}
+function normalizeActive(active){
+  if(!active.totals){
+    const d=active.draft||{};
+    active.totals={
+      transfer:Number(d.transfer||0),
+      cash:Number(d.cash||0),
+      courtRevenue:Number(d.courtRevenue||0),
+      waterRevenue:Number(d.waterRevenue||0)
+    };
+  }
+  if(!Array.isArray(active.entries))active.entries=[];
+  delete active.draft;
+  return active;
+}
 function setActive(value){value?localStorage.setItem(STORAGE.active,JSON.stringify(value)):localStorage.removeItem(STORAGE.active)}
 function parseMoney(value){return Number(String(value||'').replace(/\D/g,''))||0}
 function formatMoneyInput(el){const n=parseMoney(el.value);el.value=n?new Intl.NumberFormat('vi-VN').format(n):''}
 function setMoneyInput(id,value){const el=$(id);if(el)el.value=Number(value||0)?new Intl.NumberFormat('vi-VN').format(Number(value||0)):''}
+function clearEntryInputs(){['entryTransfer','entryCash','entryCourt','entryWater'].forEach(id=>{if($(id))$(id).value=''})}
 function toast(message){const t=$('toast');t.textContent=message;t.classList.add('show');clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove('show'),2600)}
 function escapeHtml(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 
@@ -54,11 +74,13 @@ function beginShift(){
     employee,
     startAt:now.toISOString(),
     dateKey:localDateKey(now),
-    draft:{transfer:0,cash:0,courtRevenue:0,waterRevenue:0}
+    totals:{transfer:0,cash:0,courtRevenue:0,waterRevenue:0},
+    entries:[]
   };
   localStorage.setItem(STORAGE.employee,employee);
   setActive(record);
   selectedShift=null;
+  clearEntryInputs();
   render();
   toast(`Đã bắt đầu ${shift.name}`);
 }
@@ -67,15 +89,12 @@ function renderActive(){
   $('activeShiftCard').classList.toggle('hidden',!active);
   $('startShiftCard').classList.toggle('hidden',!!active);
   if(!active){clearInterval(elapsedTimer);elapsedTimer=null;return}
+  setActive(active);
   const shift=SHIFTS[active.shiftKey]||{name:active.shiftName,time:active.scheduledTime};
   $('activeShiftName').textContent=shift.name;
   $('activeShiftMeta').textContent=`${active.employee} · ${shift.time} · bắt đầu thực tế ${vnTime(active.startAt)}`;
-  const d=active.draft||{};
-  setMoneyInput('liveTransfer',d.transfer);
-  setMoneyInput('liveCash',d.cash);
-  setMoneyInput('liveCourt',d.courtRevenue);
-  setMoneyInput('liveWater',d.waterRevenue);
-  updateLiveTotals();
+  renderActiveTotals(active);
+  renderEntryList(active);
   updateElapsed(active.startAt);
   clearInterval(elapsedTimer);elapsedTimer=setInterval(()=>updateElapsed(active.startAt),1000);
 }
@@ -84,33 +103,82 @@ function updateElapsed(startAt){
   const total=Math.floor(ms/1000),h=Math.floor(total/3600),m=Math.floor((total%3600)/60),s=total%60;
   $('elapsedTime').textContent=[h,m,s].map(x=>String(x).padStart(2,'0')).join(':');
 }
-function updateLiveTotals(){
-  const transfer=parseMoney($('liveTransfer')?.value),cash=parseMoney($('liveCash')?.value),court=parseMoney($('liveCourt')?.value),water=parseMoney($('liveWater')?.value);
+function renderActiveTotals(active=getActive()){
+  if(!active)return;
+  const t=active.totals||{};
+  const transfer=Number(t.transfer||0),cash=Number(t.cash||0),court=Number(t.courtRevenue||0),water=Number(t.waterRevenue||0);
   const collected=transfer+cash,revenue=court+water,difference=collected-revenue;
+  $('liveTransferTotal').textContent=money(transfer);
+  $('liveCashTotal').textContent=money(cash);
+  $('liveCourtTotal').textContent=money(court);
+  $('liveWaterTotal').textContent=money(water);
   $('liveCollectedTotal').textContent=money(collected);
   $('liveRevenueTotal').textContent=money(revenue);
   $('liveDifferenceTotal').textContent=money(difference);
   $('liveDifferenceTotal').className=difference<0?'negative':difference>0?'positive':'';
 }
-function saveLiveDraft(){
-  const active=getActive();if(!active)return;
-  active.draft={
-    transfer:parseMoney($('liveTransfer').value),
-    cash:parseMoney($('liveCash').value),
-    courtRevenue:parseMoney($('liveCourt').value),
-    waterRevenue:parseMoney($('liveWater').value)
+function addEntry(){
+  const active=getActive();if(!active)return toast('Chưa bắt đầu ca');
+  const entry={
+    id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),
+    at:new Date().toISOString(),
+    transfer:parseMoney($('entryTransfer').value),
+    cash:parseMoney($('entryCash').value),
+    courtRevenue:parseMoney($('entryCourt').value),
+    waterRevenue:parseMoney($('entryWater').value)
   };
+  if(!(entry.transfer||entry.cash||entry.courtRevenue||entry.waterRevenue))return toast('Hãy nhập ít nhất một khoản tiền');
+  active.totals.transfer+=entry.transfer;
+  active.totals.cash+=entry.cash;
+  active.totals.courtRevenue+=entry.courtRevenue;
+  active.totals.waterRevenue+=entry.waterRevenue;
+  active.entries.unshift(entry);
   setActive(active);
-  updateLiveTotals();
+  clearEntryInputs();
+  renderActiveTotals(active);
+  renderEntryList(active);
+  toast('Đã cộng vào ca');
+}
+function deleteEntry(id){
+  const active=getActive();if(!active)return;
+  const entry=active.entries.find(x=>x.id===id);if(!entry)return;
+  if(!confirm('Xóa khoản đã nhập này?'))return;
+  active.totals.transfer=Math.max(0,active.totals.transfer-Number(entry.transfer||0));
+  active.totals.cash=Math.max(0,active.totals.cash-Number(entry.cash||0));
+  active.totals.courtRevenue=Math.max(0,active.totals.courtRevenue-Number(entry.courtRevenue||0));
+  active.totals.waterRevenue=Math.max(0,active.totals.waterRevenue-Number(entry.waterRevenue||0));
+  active.entries=active.entries.filter(x=>x.id!==id);
+  setActive(active);
+  renderActiveTotals(active);
+  renderEntryList(active);
+  toast('Đã xóa khoản nhập');
+}
+function renderEntryList(active=getActive()){
+  if(!active)return;
+  const list=active.entries||[];
+  $('emptyEntryList').classList.toggle('hidden',list.length>0);
+  $('entryList').innerHTML=list.map(e=>{
+    const parts=[];
+    if(e.transfer)parts.push(`CK ${money(e.transfer)}`);
+    if(e.cash)parts.push(`TM ${money(e.cash)}`);
+    if(e.courtRevenue)parts.push(`Sân ${money(e.courtRevenue)}`);
+    if(e.waterRevenue)parts.push(`Nước ${money(e.waterRevenue)}`);
+    return `<div class="card" style="padding:12px;margin:8px 0;background:#fff">
+      <div class="top" style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+        <div><b>${vnTime(e.at)}</b><div class="muted" style="margin-top:4px">${parts.join(' · ')}</div></div>
+        <button type="button" class="btn btn-secondary" style="padding:8px 10px" onclick="deleteEntry('${e.id}')">Xóa</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 function openEndDialog(){
   const active=getActive();if(!active)return;
-  const d=active.draft||{};
+  const t=active.totals||{};
   $('endDialogTitle').textContent=`Kết thúc ${active.shiftName} · ${active.employee}`;
-  setMoneyInput('transferAmount',d.transfer);
-  setMoneyInput('cashAmount',d.cash);
-  setMoneyInput('courtRevenue',d.courtRevenue);
-  setMoneyInput('waterRevenue',d.waterRevenue);
+  setMoneyInput('transferAmount',t.transfer);
+  setMoneyInput('cashAmount',t.cash);
+  setMoneyInput('courtRevenue',t.courtRevenue);
+  setMoneyInput('waterRevenue',t.waterRevenue);
   $('shiftNote').value='';
   updateReconcile();
   $('endShiftDialog').showModal();
@@ -125,12 +193,13 @@ function updateReconcile(){
 function finishShift(e){
   e.preventDefault();
   const active=getActive();if(!active)return closeEndDialog();
-  const transfer=parseMoney($('transferAmount').value),cash=parseMoney($('cashAmount').value),court=parseMoney($('courtRevenue').value),water=parseMoney($('waterRevenue').value);
+  const t=active.totals||{};
+  const transfer=Number(t.transfer||0),cash=Number(t.cash||0),court=Number(t.courtRevenue||0),water=Number(t.waterRevenue||0);
   const collected=transfer+cash,revenue=court+water,difference=collected-revenue;
   if(!confirm(`Xác nhận kết thúc ${active.shiftName}?\nTổng doanh thu: ${money(revenue)}\nChênh lệch: ${money(difference)}`))return;
   const completed={...active,endAt:new Date().toISOString(),transfer,cash,courtRevenue:court,waterRevenue:water,collectedTotal:collected,revenueTotal:revenue,difference,note:$('shiftNote').value.trim(),status:'completed'};
-  delete completed.draft;
-  const history=readHistory();history.unshift(completed);saveHistory(history);setActive(null);closeEndDialog();render();toast(`Đã kết thúc ${active.shiftName}`);
+  delete completed.totals;
+  const history=readHistory();history.unshift(completed);saveHistory(history);setActive(null);closeEndDialog();clearEntryInputs();render();toast(`Đã kết thúc ${active.shiftName}`);
 }
 
 function recordsFor(dateKey,shiftKey='all'){
@@ -150,11 +219,13 @@ function renderHistory(){
   $('historyList').innerHTML=list.map(x=>{
     const diffClass=x.difference<0?'negative':x.difference>0?'positive':'';
     const diffText=x.difference===0?'Khớp tiền':x.difference>0?'Thừa':'Thiếu';
+    const entryCount=Array.isArray(x.entries)?x.entries.length:0;
     return `<article class="history-item">
       <div class="history-top"><div><div class="history-title">${escapeHtml(x.shiftName)} · ${escapeHtml(x.employee)}</div><div class="history-meta">${vnDateShort(x.startAt)} · ${vnTime(x.startAt)} → ${vnTime(x.endAt)} · ${escapeHtml(x.scheduledTime)}</div></div><div class="history-money">${money(x.revenueTotal)}</div></div>
       <div class="history-detail">
         <div>Chuyển khoản<b>${money(x.transfer)}</b></div><div>Tiền mặt<b>${money(x.cash)}</b></div><div>Doanh thu sân<b>${money(x.courtRevenue)}</b></div><div>Doanh thu nước<b>${money(x.waterRevenue)}</b></div>
         <div class="difference ${diffClass}">${diffText}<b>${money(x.difference)}</b></div>
+        ${entryCount?`<div class="note">Đã ghi nhận <b>${entryCount} lần</b> trong ca</div>`:''}
         ${x.note?`<div class="note">Ghi chú: <b>${escapeHtml(x.note)}</b></div>`:''}
       </div>
     </article>`
@@ -162,7 +233,7 @@ function renderHistory(){
 }
 function exportCsv(){
   const date=$('historyDate').value||localDateKey(),shift=$('historyShift').value||'all',list=recordsFor(date,shift);if(!list.length)return toast('Không có dữ liệu để xuất');
-  const rows=[['Ngày','Ca','Khung giờ','Nhân viên','Bắt đầu','Kết thúc','Chuyển khoản','Tiền mặt','Doanh thu sân','Doanh thu nước','Tổng tiền thu','Tổng doanh thu','Chênh lệch','Ghi chú'],...list.map(x=>[prettyDateKey(x.dateKey),x.shiftName,x.scheduledTime,x.employee,vnTime(x.startAt),vnTime(x.endAt),x.transfer,x.cash,x.courtRevenue,x.waterRevenue,x.collectedTotal,x.revenueTotal,x.difference,x.note||''])];
+  const rows=[['Ngày','Ca','Khung giờ','Nhân viên','Bắt đầu','Kết thúc','Chuyển khoản','Tiền mặt','Doanh thu sân','Doanh thu nước','Tổng tiền thu','Tổng doanh thu','Chênh lệch','Số lần ghi nhận','Ghi chú'],...list.map(x=>[prettyDateKey(x.dateKey),x.shiftName,x.scheduledTime,x.employee,vnTime(x.startAt),vnTime(x.endAt),x.transfer,x.cash,x.courtRevenue,x.waterRevenue,x.collectedTotal,x.revenueTotal,x.difference,Array.isArray(x.entries)?x.entries.length:0,x.note||''])];
   const csv='\ufeff'+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`971-doanh-thu-${date}-${shift}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
@@ -171,9 +242,13 @@ function render(){renderActive();renderSummary();renderHistory();updateStartButt
 function setup(){
   const today=localDateKey();$('todayLabel').textContent=vnDate();$('summaryDate').value=today;$('historyDate').value=today;$('employeeName').value=localStorage.getItem(STORAGE.employee)||'';
   document.querySelectorAll('.shift-option').forEach(btn=>btn.addEventListener('click',()=>selectShift(btn.dataset.shift)));
-  $('employeeName').addEventListener('input',updateStartButton);$('startShiftBtn').addEventListener('click',beginShift);$('openEndShiftBtn').addEventListener('click',openEndDialog);$('closeDialogBtn').addEventListener('click',closeEndDialog);$('endShiftForm').addEventListener('submit',finishShift);
-  document.querySelectorAll('.money-input').forEach(el=>{el.addEventListener('input',()=>{formatMoneyInput(el);updateReconcile()});el.addEventListener('focus',()=>el.select())});
-  document.querySelectorAll('.live-money-input').forEach(el=>{el.addEventListener('input',()=>{formatMoneyInput(el);saveLiveDraft()});el.addEventListener('focus',()=>el.select())});
+  $('employeeName').addEventListener('input',updateStartButton);
+  $('startShiftBtn').addEventListener('click',beginShift);
+  $('addEntryBtn').addEventListener('click',addEntry);
+  $('openEndShiftBtn').addEventListener('click',openEndDialog);
+  $('closeDialogBtn').addEventListener('click',closeEndDialog);
+  $('endShiftForm').addEventListener('submit',finishShift);
+  document.querySelectorAll('.entry-money-input').forEach(el=>{el.addEventListener('input',()=>formatMoneyInput(el));el.addEventListener('focus',()=>el.select());el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addEntry()}})});
   $('summaryDate').addEventListener('change',renderSummary);$('historyDate').addEventListener('change',renderHistory);$('historyShift').addEventListener('change',renderHistory);$('exportBtn').addEventListener('click',exportCsv);
   $('endShiftDialog').addEventListener('click',e=>{if(e.target===$('endShiftDialog'))closeEndDialog()});
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('installBtn').classList.remove('hidden')});
