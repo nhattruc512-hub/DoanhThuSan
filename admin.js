@@ -1,7 +1,8 @@
-// PIN-protected manager area for deleting completed shifts.
+// PIN-protected manager area for deleting completed shifts and clearing attendance locations.
 (function(){
   const MANAGER_ENDPOINT='https://dinqlgaveujdeyisgpty.supabase.co/functions/v1/manager-delete-shift';
   let managerPin='';
+  let managerAttendance=[];
 
   function mountManager(){
     const main=document.querySelector('main.container');
@@ -14,16 +15,17 @@
       <div class="card-head compact">
         <div>
           <p class="section-kicker">QUẢN LÝ</p>
-          <h2>Quản lý ca đã tạo</h2>
-          <p class="muted">Khu vực dành cho quản lý. Cần PIN để xem và xóa ca.</p>
+          <h2>Quản lý dữ liệu</h2>
+          <p class="muted">Cần PIN để xóa ca và xóa vị trí trong lịch sử chấm công.</p>
         </div>
         <button id="managerOpenBtn" class="btn btn-secondary" type="button">MỞ QUẢN LÝ</button>
       </div>
       <div id="managerPanel" class="hidden" style="margin-top:14px">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px">
-          <b>Danh sách ca đã kết thúc</b>
+          <b>Khu vực quản lý</b>
           <button id="managerLockBtn" class="btn btn-secondary" type="button">Khóa</button>
         </div>
+
         <div class="filters" style="margin-bottom:12px">
           <input id="managerDate" class="input" type="date" />
           <select id="managerShift" class="input">
@@ -33,15 +35,29 @@
             <option value="ca3">Ca 3</option>
           </select>
         </div>
-        <div id="managerShiftList"></div>
-        <div id="managerEmpty" class="empty-state hidden" style="padding:18px 8px"><b>Không có ca phù hợp</b></div>
+
+        <div style="margin-top:8px">
+          <p class="section-kicker">CA ĐÃ KẾT THÚC</p>
+          <div id="managerShiftList"></div>
+          <div id="managerEmpty" class="empty-state hidden" style="padding:18px 8px"><b>Không có ca phù hợp</b></div>
+        </div>
+
+        <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line)">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px">
+            <div><p class="section-kicker">LỊCH SỬ CHẤM CÔNG</p><p class="muted">Có thể xóa riêng dữ liệu vị trí GPS, vẫn giữ giờ chấm công và trạng thái.</p></div>
+            <button id="managerAttendanceRefresh" class="btn btn-secondary" type="button">Làm mới</button>
+          </div>
+          <div id="managerAttendanceList"></div>
+          <div id="managerAttendanceEmpty" class="empty-state hidden" style="padding:18px 8px"><b>Không có chấm công trong ngày này</b></div>
+        </div>
       </div>`;
     if(historyCard)main.insertBefore(section,historyCard);else main.appendChild(section);
 
     $('managerOpenBtn').addEventListener('click',unlockManager);
     $('managerLockBtn').addEventListener('click',lockManager);
-    $('managerDate').addEventListener('change',renderManagerShifts);
-    $('managerShift').addEventListener('change',renderManagerShifts);
+    $('managerDate').addEventListener('change',()=>{renderManagerShifts();loadManagerAttendance()});
+    $('managerShift').addEventListener('change',()=>{renderManagerShifts();renderManagerAttendance()});
+    $('managerAttendanceRefresh').addEventListener('click',loadManagerAttendance);
   }
 
   function unlockManager(){
@@ -53,11 +69,13 @@
     $('managerOpenBtn').classList.add('hidden');
     $('managerDate').value=localDateKey();
     renderManagerShifts();
+    loadManagerAttendance();
     toast('Đã mở mục Quản Lý');
   }
 
   function lockManager(){
     managerPin='';
+    managerAttendance=[];
     $('managerPanel').classList.add('hidden');
     $('managerOpenBtn').classList.remove('hidden');
     toast('Đã khóa mục Quản Lý');
@@ -83,6 +101,61 @@
     document.querySelectorAll('[data-delete-shift]').forEach(btn=>btn.addEventListener('click',()=>deleteManagerShift(btn.dataset.deleteShift)));
   }
 
+  async function loadManagerAttendance(){
+    if(!managerPin)return;
+    try{
+      const date=$('managerDate').value||localDateKey();
+      managerAttendance=await cloudFetch(`staff_attendance_records?select=*&date_key=eq.${encodeURIComponent(date)}&order=punched_at.desc`)||[];
+      renderManagerAttendance();
+    }catch(err){console.error(err);toast('Không tải được lịch sử chấm công')}
+  }
+
+  function renderManagerAttendance(){
+    if(!managerPin||!$('managerAttendanceList'))return;
+    const shift=$('managerShift').value||'all';
+    const list=managerAttendance.filter(x=>shift==='all'||x.shift_key===shift);
+    $('managerAttendanceEmpty').classList.toggle('hidden',list.length>0);
+    $('managerAttendanceList').innerHTML=list.map(r=>{
+      const hasLocation=r.latitude!=null&&r.longitude!=null;
+      const status=r.status==='late'?`Trễ ${Number(r.late_minutes||0)} phút`:'Đúng giờ';
+      const location=hasLocation?`${Number(r.latitude).toFixed(6)}, ${Number(r.longitude).toFixed(6)}${r.accuracy_m?` · ±${Math.round(r.accuracy_m)}m`:''}`:'Đã xóa vị trí';
+      return `<div class="card" style="padding:13px;margin:9px 0;background:#fff">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
+          <div style="min-width:0">
+            <div style="font-weight:900">${escapeHtml(r.employee)} · ${escapeHtml(r.shift_name)}</div>
+            <div class="muted" style="margin-top:4px">${vnDateShort(r.punched_at)} · ${vnTime(r.punched_at)} · ${escapeHtml(status)}</div>
+            <div class="muted" style="margin-top:4px">📍 ${escapeHtml(location)}</div>
+          </div>
+          <button class="btn ${hasLocation?'btn-danger':'btn-secondary'}" type="button" style="padding:8px 10px;flex:0 0 auto" ${hasLocation?'':'disabled'} data-clear-attendance-location="${escapeHtml(r.id)}">${hasLocation?'Xóa vị trí':'Đã xóa'}</button>
+        </div>
+      </div>`;
+    }).join('');
+    document.querySelectorAll('[data-clear-attendance-location]').forEach(btn=>{
+      if(!btn.disabled)btn.addEventListener('click',()=>clearAttendanceLocation(btn.dataset.clearAttendanceLocation));
+    });
+  }
+
+  async function clearAttendanceLocation(id){
+    if(!managerPin)return toast('Mục Quản Lý đang khóa');
+    const item=managerAttendance.find(x=>String(x.id)===String(id));
+    if(!item)return toast('Không tìm thấy chấm công');
+    if(!confirm(`Xóa vị trí chấm công của ${item.employee}?\nNgày giờ, ca và trạng thái chấm công vẫn được giữ lại.`))return;
+    try{
+      const res=await fetch(MANAGER_ENDPOINT,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-manager-pin':managerPin},
+        body:JSON.stringify({action:'clear_attendance_location',id:String(id)})
+      });
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok){if(res.status===401)lockManager();throw new Error(data.error||`Lỗi ${res.status}`)}
+      const row=managerAttendance.find(x=>String(x.id)===String(id));
+      if(row){row.latitude=null;row.longitude=null;row.accuracy_m=null}
+      renderManagerAttendance();
+      if(typeof window.reloadAttendance==='function')window.reloadAttendance();
+      toast('Đã xóa vị trí chấm công');
+    }catch(err){console.error(err);toast('Không xóa được vị trí: '+err.message)}
+  }
+
   async function deleteManagerShift(id){
     if(!managerPin)return toast('Mục Quản Lý đang khóa');
     const item=readHistory().find(x=>String(x.id)===String(id));
@@ -92,7 +165,7 @@
       const res=await fetch(MANAGER_ENDPOINT,{
         method:'POST',
         headers:{'Content-Type':'application/json','x-manager-pin':managerPin},
-        body:JSON.stringify({id:String(id)})
+        body:JSON.stringify({id:String(id),action:'delete_shift'})
       });
       const data=await res.json().catch(()=>({}));
       if(!res.ok){
