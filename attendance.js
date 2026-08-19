@@ -35,10 +35,12 @@
     if($('attendanceEmployee')&&$('attendanceEmployee').value!==name)$('attendanceEmployee').value=name;
     if($('employeeName')&&$('employeeName').value!==name){$('employeeName').value=name;updateStartButton()}
   }
+  function hasLocation(r){return r&&r.latitude!=null&&r.longitude!=null}
   function locationText(r){
+    if(!hasLocation(r))return 'Vị trí đã được quản lý xóa';
     return `${Number(r.latitude).toFixed(6)}, ${Number(r.longitude).toFixed(6)}${r.accuracy_m?` · ±${Math.round(r.accuracy_m)}m`:''}`;
   }
-  function mapsUrl(r){return `https://www.google.com/maps?q=${encodeURIComponent(r.latitude+','+r.longitude)}`}
+  function mapsUrl(r){return hasLocation(r)?`https://www.google.com/maps?q=${encodeURIComponent(r.latitude+','+r.longitude)}`:''}
 
   function mountAttendance(){
     const main=document.querySelector('main.container');
@@ -113,20 +115,7 @@
       toast('Đang lấy vị trí chấm công...');
       const pos=await getPosition();
       syncEmployeeName(employee);
-      const row={
-        employee:employee.slice(0,60),
-        punched_at:now.toISOString(),
-        date_key:dateKeyFromParts(p),
-        shift_key:shift.key,
-        shift_name:shift.name,
-        scheduled_start:shift.startText+':00',
-        scheduled_end:shift.endText+':00',
-        status:shift.status,
-        late_minutes:shift.lateMinutes,
-        latitude:pos.coords.latitude,
-        longitude:pos.coords.longitude,
-        accuracy_m:pos.coords.accuracy
-      };
+      const row={employee:employee.slice(0,60),punched_at:now.toISOString(),date_key:dateKeyFromParts(p),shift_key:shift.key,shift_name:shift.name,scheduled_start:shift.startText+':00',scheduled_end:shift.endText+':00',status:shift.status,late_minutes:shift.lateMinutes,latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy_m:pos.coords.accuracy};
       const res=await fetch(`${CLOUD_URL}/rest/v1/${ATTENDANCE_TABLE}`,{method:'POST',headers:{...cloudHeaders,Prefer:'return=representation'},body:JSON.stringify(row)});
       if(res.status===409)throw new Error('Bạn đã chấm công ca này hôm nay rồi');
       if(!res.ok)throw new Error('Không lưu được chấm công');
@@ -136,19 +125,16 @@
       toast(shift.status==='late'?`Đã chấm công · Trễ ${shift.lateMinutes} phút`:'Đã chấm công đúng giờ');
     }catch(err){
       const geo=err&&typeof err.code==='number';
-      if(geo){
-        const msg=err.code===1?'Bạn cần cho phép truy cập vị trí để chấm công':err.code===2?'Không xác định được vị trí':'Lấy vị trí quá lâu, hãy thử lại';
-        toast(msg);
-      }else toast(err.message||'Không chấm công được');
+      if(geo){const msg=err.code===1?'Bạn cần cho phép truy cập vị trí để chấm công':err.code===2?'Không xác định được vị trí':'Lấy vị trí quá lâu, hãy thử lại';toast(msg)}else toast(err.message||'Không chấm công được');
     }finally{loading=false;$('attendancePunchBtn').disabled=false;$('attendancePunchBtn').classList.remove('loading')}
   }
 
   function showPunchResult(r){
-    const box=$('attendanceMessage');
-    if(!box)return;
+    const box=$('attendanceMessage');if(!box)return;
     const late=r.status==='late';
+    const location=hasLocation(r)?`<a href="${mapsUrl(r)}" target="_blank" rel="noopener">📍 ${locationText(r)}</a>`:`<span>📍 ${locationText(r)}</span>`;
     box.className=`attendance-result ${late?'late':'ok'}`;
-    box.innerHTML=`<div><b>${late?`⚠ TRỄ ${r.late_minutes} PHÚT`:'✓ CHẤM CÔNG ĐÚNG GIỜ'}</b><span>${escapeHtml(r.employee)} · ${escapeHtml(r.shift_name)}</span></div><div><b>${vnTime(r.punched_at)}</b><a href="${mapsUrl(r)}" target="_blank" rel="noopener">📍 ${locationText(r)}</a></div>`;
+    box.innerHTML=`<div><b>${late?`⚠ TRỄ ${r.late_minutes} PHÚT`:'✓ CHẤM CÔNG ĐÚNG GIỜ'}</b><span>${escapeHtml(r.employee)} · ${escapeHtml(r.shift_name)}</span></div><div><b>${vnTime(r.punched_at)}</b>${location}</div>`;
   }
 
   async function loadAttendance(){
@@ -163,13 +149,12 @@
     $('attendanceEmpty').classList.toggle('hidden',attendanceRows.length>0);
     $('attendanceList').innerHTML=attendanceRows.map(r=>{
       const late=r.status==='late';
-      return `<div class="attendance-row">
-        <div class="attendance-person"><b>${escapeHtml(r.employee)}</b><span>${escapeHtml(r.shift_name)} · ${vnTime(r.punched_at)}</span></div>
-        <div class="attendance-status ${late?'late':'ok'}">${late?`Trễ ${r.late_minutes}p`:'Đúng giờ'}</div>
-        <a class="attendance-location" href="${mapsUrl(r)}" target="_blank" rel="noopener">📍 ${locationText(r)}</a>
-      </div>`;
+      const location=hasLocation(r)?`<a class="attendance-location" href="${mapsUrl(r)}" target="_blank" rel="noopener">📍 ${locationText(r)}</a>`:`<div class="attendance-location muted">📍 ${locationText(r)}</div>`;
+      return `<div class="attendance-row"><div class="attendance-person"><b>${escapeHtml(r.employee)}</b><span>${escapeHtml(r.shift_name)} · ${vnTime(r.punched_at)}</span></div><div class="attendance-status ${late?'late':'ok'}">${late?`Trễ ${r.late_minutes}p`:'Đúng giờ'}</div>${location}</div>`;
     }).join('');
   }
+
+  window.reloadAttendance=loadAttendance;
 
   const style=document.createElement('style');
   style.textContent=`
