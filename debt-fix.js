@@ -11,6 +11,7 @@ let cloudHistory=[];
 let cloudDebts=[];
 let cloudHistoryReady=false;
 let cloudDebtsReady=false;
+let deletedShiftIds=new Set();
 
 function historyToRow(x){return {
   id:String(x.id),date_key:x.dateKey,shift_key:x.shiftKey||'',shift_name:x.shiftName||'',scheduled_time:x.scheduledTime||'',employee:x.employee||'Chưa ghi tên NV',
@@ -33,8 +34,9 @@ async function cloudFetch(path,options={}){
   const text=await res.text();return text?JSON.parse(text):null;
 }
 async function upsertHistory(items){
-  if(!items.length)return;
-  await cloudFetch('staff_shift_history?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(items.map(historyToRow))});
+  const allowed=(items||[]).filter(x=>!deletedShiftIds.has(String(x.id)));
+  if(!allowed.length)return;
+  await cloudFetch('staff_shift_history?on_conflict=id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(allowed.map(historyToRow))});
 }
 async function upsertDebts(items){
   if(!items.length)return;
@@ -42,9 +44,9 @@ async function upsertDebts(items){
 }
 async function deleteCloudDebt(id){await cloudFetch(`customer_debts?id=eq.${encodeURIComponent(id)}`,{method:'DELETE',headers:{Prefer:'return=minimal'}})}
 
-readHistory=function(){return (cloudHistoryReady?cloudHistory:localReadHistory()).slice()};
+readHistory=function(){return (cloudHistoryReady?cloudHistory:localReadHistory()).filter(x=>!deletedShiftIds.has(String(x.id))).slice()};
 saveHistory=function(items){
-  const clean=Array.isArray(items)?items:[];
+  const clean=(Array.isArray(items)?items:[]).filter(x=>!deletedShiftIds.has(String(x.id)));
   localSaveHistory(clean);cloudHistory=clean.slice();cloudHistoryReady=true;
   upsertHistory(clean).catch(err=>console.error('Không đồng bộ được lịch sử ca:',err));
 };
@@ -79,12 +81,15 @@ addDebt=function(){
 
 async function syncSharedData(){
   try{
-    const [historyRows,debtRows]=await Promise.all([
+    const [historyRows,debtRows,deletedRows]=await Promise.all([
       cloudFetch('staff_shift_history?select=*&order=start_at.desc'),
-      cloudFetch('customer_debts?select=*&settled=eq.false&order=created_at.desc')
+      cloudFetch('customer_debts?select=*&settled=eq.false&order=created_at.desc'),
+      cloudFetch('deleted_staff_shifts?select=id')
     ]);
-    const localHistory=localReadHistory();
-    const remoteHistory=(historyRows||[]).map(rowToHistory);
+    deletedShiftIds=new Set((deletedRows||[]).map(x=>String(x.id)));
+
+    const localHistory=localReadHistory().filter(x=>!deletedShiftIds.has(String(x.id)));
+    const remoteHistory=(historyRows||[]).map(rowToHistory).filter(x=>!deletedShiftIds.has(String(x.id)));
     const hMap=new Map(remoteHistory.map(x=>[x.id,x]));localHistory.forEach(x=>hMap.set(x.id,x));
     cloudHistory=[...hMap.values()].sort((a,b)=>new Date(b.startAt)-new Date(a.startAt));cloudHistoryReady=true;localSaveHistory(cloudHistory);
     if(localHistory.length)await upsertHistory(localHistory);
