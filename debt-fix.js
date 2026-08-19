@@ -116,3 +116,8 @@ setInterval(syncSharedData,30000);
 const managerScript=document.createElement('script');
 managerScript.src='./admin.js';
 document.body.appendChild(managerScript);
+
+// Load server-synchronized active shift state.
+const liveShiftScript=document.createElement('script');
+liveShiftScript.src='./live-shift.js';
+document.body.appendChild(liveShiftScript);
