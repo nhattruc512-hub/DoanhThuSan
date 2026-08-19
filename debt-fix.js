@@ -34,9 +34,13 @@ async function syncSharedData(){try{const [historyRows,debtRows,deletedRows]=awa
 syncSharedData();setInterval(syncSharedData,30000);
 
 const managerScript=document.createElement('script');
-managerScript.src='./admin.js?v=15';
+managerScript.src='./admin.js?v=16';
 document.body.appendChild(managerScript);
 
 const liveShiftScript=document.createElement('script');
-liveShiftScript.src='./live-shift.js?v=15';
+liveShiftScript.src='./live-shift.js?v=16';
 document.body.appendChild(liveShiftScript);
+
+const quickRevenueScript=document.createElement('script');
+quickRevenueScript.src='./quick-revenue.js?v=16';
+document.body.appendChild(quickRevenueScript);
