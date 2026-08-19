@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0f766e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="971 Nhân viên" />
+  <title>971 Relax Court - Nhân viên</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="container header-inner">
+      <div>
+        <p class="eyebrow">971 RELAX COURT</p>
+        <h1>Quản lý ca nhân viên</h1>
+        <p id="todayLabel" class="muted"></p>
+      </div>
+      <button id="installBtn" class="btn btn-light hidden" type="button">Cài app</button>
+    </div>
+  </header>
+
+  <main class="container main-grid">
+    <section id="activeShiftCard" class="card active-card hidden" aria-live="polite">
+      <div class="card-head">
+        <div>
+          <p class="section-kicker">CA ĐANG HOẠT ĐỘNG</p>
+          <h2 id="activeShiftName">Ca 1</h2>
+          <p id="activeShiftMeta" class="muted"></p>
+        </div>
+        <span class="status-dot">Đang làm</span>
+      </div>
+      <div class="elapsed-box">
+        <span>Thời gian đã làm</span>
+        <strong id="elapsedTime">00:00:00</strong>
+      </div>
+      <button id="openEndShiftBtn" class="btn btn-danger btn-block" type="button">KẾT THÚC CA</button>
+    </section>
+
+    <section id="startShiftCard" class="card">
+      <div class="card-head">
+        <div>
+          <p class="section-kicker">BẮT ĐẦU LÀM VIỆC</p>
+          <h2>Chọn ca</h2>
+          <p class="muted">Mỗi thời điểm chỉ có thể mở 1 ca.</p>
+        </div>
+      </div>
+
+      <label class="field-label" for="employeeName">Tên nhân viên</label>
+      <input id="employeeName" class="input" type="text" maxlength="60" autocomplete="name" placeholder="Nhập tên nhân viên" />
+
+      <div class="shift-grid" id="shiftGrid">
+        <button class="shift-option" type="button" data-shift="ca1">
+          <span class="shift-number">1</span>
+          <span><b>Ca 1</b><small>05:00 - 11:00</small></span>
+        </button>
+        <button class="shift-option" type="button" data-shift="ca2">
+          <span class="shift-number">2</span>
+          <span><b>Ca 2</b><small>14:00 - 18:00</small></span>
+        </button>
+        <button class="shift-option" type="button" data-shift="ca3">
+          <span class="shift-number">3</span>
+          <span><b>Ca 3</b><small>18:00 - 22:00</small></span>
+        </button>
+      </div>
+
+      <button id="startShiftBtn" class="btn btn-primary btn-block" type="button" disabled>BẮT ĐẦU CA</button>
+    </section>
+
+    <section class="card">
+      <div class="card-head compact">
+        <div>
+          <p class="section-kicker">TỔNG HỢP NGÀY</p>
+          <h2 id="summaryDateTitle">Hôm nay</h2>
+        </div>
+        <input id="summaryDate" class="date-input" type="date" />
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-item"><span>Chuyển khoản</span><strong id="sumTransfer">0 ₫</strong></div>
+        <div class="summary-item"><span>Tiền mặt</span><strong id="sumCash">0 ₫</strong></div>
+        <div class="summary-item"><span>Doanh thu sân</span><strong id="sumCourt">0 ₫</strong></div>
+        <div class="summary-item"><span>Doanh thu nước</span><strong id="sumWater">0 ₫</strong></div>
+      </div>
+      <div class="grand-total">
+        <span>TỔNG DOANH THU</span>
+        <strong id="sumRevenue">0 ₫</strong>
+      </div>
+    </section>
+
+    <section class="card history-card">
+      <div class="card-head compact">
+        <div>
+          <p class="section-kicker">LỊCH SỬ CA</p>
+          <h2>Theo dõi đối soát</h2>
+        </div>
+        <button id="exportBtn" class="btn btn-secondary" type="button">Xuất CSV</button>
+      </div>
+
+      <div class="filters">
+        <input id="historyDate" class="input" type="date" />
+        <select id="historyShift" class="input">
+          <option value="all">Tất cả ca</option>
+          <option value="ca1">Ca 1</option>
+          <option value="ca2">Ca 2</option>
+          <option value="ca3">Ca 3</option>
+        </select>
+      </div>
+
+      <div id="historyList" class="history-list"></div>
+      <div id="emptyHistory" class="empty-state hidden">
+        <div class="empty-icon">📋</div>
+        <b>Chưa có dữ liệu ca</b>
+        <p>Ca đã kết thúc sẽ xuất hiện ở đây.</p>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="endShiftDialog" class="dialog">
+    <form id="endShiftForm" method="dialog">
+      <div class="dialog-head">
+        <div>
+          <p class="section-kicker">ĐỐI SOÁT CUỐI CA</p>
+          <h2 id="endDialogTitle">Kết thúc ca</h2>
+        </div>
+        <button id="closeDialogBtn" class="icon-btn" type="button" aria-label="Đóng">×</button>
+      </div>
+
+      <div class="money-grid">
+        <label>
+          <span>🏦 Chuyển khoản</span>
+          <input id="transferAmount" class="input money-input" inputmode="numeric" placeholder="0" required />
+        </label>
+        <label>
+          <span>💵 Tiền mặt</span>
+          <input id="cashAmount" class="input money-input" inputmode="numeric" placeholder="0" required />
+        </label>
+        <label>
+          <span>🏸 Doanh thu sân</span>
+          <input id="courtRevenue" class="input money-input" inputmode="numeric" placeholder="0" required />
+        </label>
+        <label>
+          <span>🥤 Doanh thu nước</span>
+          <input id="waterRevenue" class="input money-input" inputmode="numeric" placeholder="0" required />
+        </label>
+      </div>
+
+      <label class="field-label" for="shiftNote">Ghi chú cuối ca</label>
+      <textarea id="shiftNote" class="input textarea" rows="3" maxlength="300" placeholder="Ví dụ: thiếu 20.000đ, khách chuyển khoản trễ..."></textarea>
+
+      <div class="reconcile-box">
+        <div><span>Tổng tiền thu</span><b id="collectedTotal">0 ₫</b></div>
+        <div><span>Tổng doanh thu</span><b id="revenueTotal">0 ₫</b></div>
+        <div class="difference-row"><span>Chênh lệch</span><b id="differenceTotal">0 ₫</b></div>
+      </div>
+
+      <button id="finishShiftBtn" class="btn btn-danger btn-block" type="submit">XÁC NHẬN KẾT THÚC CA</button>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
