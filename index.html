@@ -33,36 +33,63 @@
         </div>
         <span class="status-dot">Đang làm</span>
       </div>
+
       <div class="elapsed-box">
         <span>Thời gian đã làm</span>
         <strong id="elapsedTime">00:00:00</strong>
       </div>
 
       <div style="margin-top:18px">
-        <p class="section-kicker">NHẬP DOANH THU TRONG CA</p>
-        <p class="muted" style="margin-top:4px">Nhân viên có thể cập nhật bất cứ lúc nào. Số liệu được tự lưu trên thiết bị.</p>
+        <p class="section-kicker">GHI NHẬN THÊM DOANH THU</p>
+        <p class="muted" style="margin-top:4px">Mỗi khi có khoản thu, nhập số tiền vào đúng mục rồi bấm <b>Cộng vào ca</b>. Có thể nhập nhiều lần trong một ca.</p>
+
         <div class="money-grid" style="margin-top:12px">
           <label>
             <span>🏦 Chuyển khoản</span>
-            <input id="liveTransfer" class="input live-money-input" inputmode="numeric" placeholder="0" />
+            <input id="entryTransfer" class="input entry-money-input" inputmode="numeric" placeholder="Nhập thêm" />
           </label>
           <label>
             <span>💵 Tiền mặt</span>
-            <input id="liveCash" class="input live-money-input" inputmode="numeric" placeholder="0" />
+            <input id="entryCash" class="input entry-money-input" inputmode="numeric" placeholder="Nhập thêm" />
           </label>
           <label>
             <span>🏸 Doanh thu sân</span>
-            <input id="liveCourt" class="input live-money-input" inputmode="numeric" placeholder="0" />
+            <input id="entryCourt" class="input entry-money-input" inputmode="numeric" placeholder="Nhập thêm" />
           </label>
           <label>
             <span>🥤 Doanh thu nước</span>
-            <input id="liveWater" class="input live-money-input" inputmode="numeric" placeholder="0" />
+            <input id="entryWater" class="input entry-money-input" inputmode="numeric" placeholder="Nhập thêm" />
           </label>
         </div>
-        <div class="reconcile-box" style="margin-top:12px">
-          <div><span>Tổng tiền thu</span><b id="liveCollectedTotal">0 ₫</b></div>
-          <div><span>Tổng doanh thu</span><b id="liveRevenueTotal">0 ₫</b></div>
-          <div class="difference-row"><span>Chênh lệch</span><b id="liveDifferenceTotal">0 ₫</b></div>
+
+        <button id="addEntryBtn" class="btn btn-primary btn-block" type="button">+ CỘNG VÀO CA</button>
+
+        <div style="margin-top:18px">
+          <p class="section-kicker">TỔNG ĐÃ GHI NHẬN TRONG CA</p>
+          <div class="summary-grid" style="margin-top:10px">
+            <div class="summary-item"><span>Chuyển khoản</span><strong id="liveTransferTotal">0 ₫</strong></div>
+            <div class="summary-item"><span>Tiền mặt</span><strong id="liveCashTotal">0 ₫</strong></div>
+            <div class="summary-item"><span>Doanh thu sân</span><strong id="liveCourtTotal">0 ₫</strong></div>
+            <div class="summary-item"><span>Doanh thu nước</span><strong id="liveWaterTotal">0 ₫</strong></div>
+          </div>
+          <div class="reconcile-box" style="margin-top:12px">
+            <div><span>Tổng tiền thu</span><b id="liveCollectedTotal">0 ₫</b></div>
+            <div><span>Tổng doanh thu</span><b id="liveRevenueTotal">0 ₫</b></div>
+            <div class="difference-row"><span>Chênh lệch</span><b id="liveDifferenceTotal">0 ₫</b></div>
+          </div>
+        </div>
+
+        <div style="margin-top:18px">
+          <div class="card-head compact" style="margin-bottom:8px">
+            <div>
+              <p class="section-kicker">LỊCH SỬ NHẬP TRONG CA</p>
+              <p class="muted" style="margin-top:3px">Có thể xóa khoản nhập nhầm.</p>
+            </div>
+          </div>
+          <div id="entryList"></div>
+          <div id="emptyEntryList" class="empty-state" style="padding:18px 8px">
+            <b>Chưa ghi nhận khoản nào</b>
+          </div>
         </div>
       </div>
 
@@ -152,33 +179,35 @@
     <form id="endShiftForm" method="dialog">
       <div class="dialog-head">
         <div>
-          <p class="section-kicker">ĐỐI SOÁT CUỐI CA</p>
+          <p class="section-kicker">TỔNG KẾT CUỐI CA</p>
           <h2 id="endDialogTitle">Kết thúc ca</h2>
         </div>
         <button id="closeDialogBtn" class="icon-btn" type="button" aria-label="Đóng">×</button>
       </div>
 
-      <div class="money-grid">
+      <p class="muted">Các số dưới đây đã được web tự cộng từ những lần nhân viên ghi nhận trong ca.</p>
+
+      <div class="money-grid" style="margin-top:12px">
         <label>
           <span>🏦 Chuyển khoản</span>
-          <input id="transferAmount" class="input money-input" inputmode="numeric" placeholder="0" required />
+          <input id="transferAmount" class="input" inputmode="numeric" readonly />
         </label>
         <label>
           <span>💵 Tiền mặt</span>
-          <input id="cashAmount" class="input money-input" inputmode="numeric" placeholder="0" required />
+          <input id="cashAmount" class="input" inputmode="numeric" readonly />
         </label>
         <label>
           <span>🏸 Doanh thu sân</span>
-          <input id="courtRevenue" class="input money-input" inputmode="numeric" placeholder="0" required />
+          <input id="courtRevenue" class="input" inputmode="numeric" readonly />
         </label>
         <label>
           <span>🥤 Doanh thu nước</span>
-          <input id="waterRevenue" class="input money-input" inputmode="numeric" placeholder="0" required />
+          <input id="waterRevenue" class="input" inputmode="numeric" readonly />
         </label>
       </div>
 
       <label class="field-label" for="shiftNote">Ghi chú cuối ca</label>
-      <textarea id="shiftNote" class="input textarea" rows="3" maxlength="300" placeholder="Ví dụ: thiếu 20.000đ, khách chuyển khoản trễ..."></textarea>
+      <textarea id="shiftNote" class="input textarea" rows="3" maxlength="300" placeholder="Ví dụ: khách chuyển khoản trễ, có khoản điều chỉnh..."></textarea>
 
       <div class="reconcile-box">
         <div><span>Tổng tiền thu</span><b id="collectedTotal">0 ₫</b></div>
