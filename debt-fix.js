@@ -26,76 +26,14 @@ async function deleteCloudDebt(id){await cloudFetch(`customer_debts?id=eq.${enco
 readHistory=function(){return (cloudHistoryReady?cloudHistory:localReadHistory()).filter(x=>!deletedShiftIds.has(String(x.id))).slice()};
 saveHistory=function(items){const clean=(Array.isArray(items)?items:[]).filter(x=>!deletedShiftIds.has(String(x.id)));localSaveHistory(clean);cloudHistory=clean.slice();cloudHistoryReady=true;upsertHistory(clean).then(()=>setTimeout(syncSharedData,150)).catch(err=>console.error('Không đồng bộ được lịch sử ca:',err))};
 readDebts=function(){return (cloudDebtsReady?cloudDebts:localReadDebts()).slice()};
-saveDebts=function(items){
-  const clean=Array.isArray(items)?items:[];
-  const previous=cloudDebtsReady?cloudDebts.slice():[];
-  localSaveDebts(clean);cloudDebts=clean.slice();cloudDebtsReady=true;
-  upsertDebts(clean).then(()=>setTimeout(syncSharedData,150)).catch(err=>console.error('Không đồng bộ được khách nợ:',err));
-  if(previous.length){const ids=new Set(clean.map(x=>x.id));previous.filter(x=>!ids.has(x.id)).forEach(x=>deleteCloudDebt(x.id).then(()=>setTimeout(syncSharedData,150)).catch(err=>console.error('Không xóa được khách nợ trên cloud:',err)))}
-};
+saveDebts=function(items){const clean=Array.isArray(items)?items:[];const previous=cloudDebtsReady?cloudDebts.slice():[];localSaveDebts(clean);cloudDebts=clean.slice();cloudDebtsReady=true;upsertDebts(clean).then(()=>setTimeout(syncSharedData,150)).catch(err=>console.error('Không đồng bộ được khách nợ:',err));if(previous.length){const ids=new Set(clean.map(x=>x.id));previous.filter(x=>!ids.has(x.id)).forEach(x=>deleteCloudDebt(x.id).then(()=>setTimeout(syncSharedData,150)).catch(err=>console.error('Không xóa được khách nợ trên cloud:',err)))}};
 
-addDebt=function(){
-  const active=getActive();
-  const customer=$('debtCustomer').value.trim();
-  const reason=$('debtReason').value.trim();
-  const amount=parseMoney($('debtAmount').value);
-  if(!customer)return toast('Nhập tên khách');
-  if(!reason)return toast('Nhập khách nợ gì');
-  if(!amount)return toast('Nhập tổng nợ');
-  const typedEmployee=$('attendanceEmployee')?.value.trim()||$('employeeName')?.value.trim()||'';
-  const savedEmployee=localStorage.getItem(STORAGE.employee)||'';
-  const employee=typedEmployee||active?.employee||savedEmployee||'Chưa ghi tên NV';
-  if(typedEmployee)localStorage.setItem(STORAGE.employee,typedEmployee);
-  const now=new Date();
-  const debt={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),createdAt:now.toISOString(),dateKey:localDateKey(now),customer:customer.slice(0,80),reason:reason.slice(0,160),amount,employee,shiftKey:active?.shiftKey||'',shiftName:active?.shiftName||'Ngoài ca'};
-  const debts=readDebts();debts.unshift(debt);saveDebts(debts);clearDebtInputs();renderDebts();toast(`Đã thêm khách nợ ${money(amount)}`)
-};
+addDebt=function(){const active=getActive();const customer=$('debtCustomer').value.trim();const reason=$('debtReason').value.trim();const amount=parseMoney($('debtAmount').value);if(!customer)return toast('Nhập tên khách');if(!reason)return toast('Nhập khách nợ gì');if(!amount)return toast('Nhập tổng nợ');const typedEmployee=$('attendanceEmployee')?.value.trim()||$('employeeName')?.value.trim()||'';const savedEmployee=localStorage.getItem(STORAGE.employee)||'';const employee=typedEmployee||active?.employee||savedEmployee||'Chưa ghi tên NV';if(typedEmployee)localStorage.setItem(STORAGE.employee,typedEmployee);const now=new Date();const debt={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),createdAt:now.toISOString(),dateKey:localDateKey(now),customer:customer.slice(0,80),reason:reason.slice(0,160),amount,employee,shiftKey:active?.shiftKey||'',shiftName:active?.shiftName||'Ngoài ca'};const debts=readDebts();debts.unshift(debt);saveDebts(debts);clearDebtInputs();renderDebts();toast(`Đã thêm khách nợ ${money(amount)}`)};
 
-async function syncSharedData(){
-  if(syncingSharedData)return;
-  syncingSharedData=true;
-  try{
-    const [historyRows,debtRows,deletedRows]=await Promise.all([
-      cloudFetch('staff_shift_history?select=*&order=start_at.desc'),
-      cloudFetch('customer_debts?select=*&settled=eq.false&order=created_at.desc'),
-      cloudFetch('deleted_staff_shifts?select=id')
-    ]);
-    deletedShiftIds=new Set((deletedRows||[]).map(x=>String(x.id)));
+async function syncSharedData(){if(syncingSharedData)return;syncingSharedData=true;try{const [historyRows,debtRows,deletedRows]=await Promise.all([cloudFetch('staff_shift_history?select=*&order=start_at.desc'),cloudFetch('customer_debts?select=*&settled=eq.false&order=created_at.desc'),cloudFetch('deleted_staff_shifts?select=id')]);deletedShiftIds=new Set((deletedRows||[]).map(x=>String(x.id)));const localHistory=localReadHistory().filter(x=>!deletedShiftIds.has(String(x.id)));const remoteHistory=(historyRows||[]).map(rowToHistory).filter(x=>!deletedShiftIds.has(String(x.id)));const hMap=new Map(remoteHistory.map(x=>[x.id,x]));localHistory.forEach(x=>{if(!hMap.has(x.id))hMap.set(x.id,x)});cloudHistory=[...hMap.values()].sort((a,b)=>new Date(b.startAt)-new Date(a.startAt));cloudHistoryReady=true;localSaveHistory(cloudHistory);if(localHistory.some(x=>!remoteHistory.some(r=>r.id===x.id)))await upsertHistory(localHistory.filter(x=>!remoteHistory.some(r=>r.id===x.id)));const localDebts=localReadDebts();const remoteDebts=(debtRows||[]).map(rowToDebt);const dMap=new Map(remoteDebts.map(x=>[x.id,x]));localDebts.forEach(x=>{if(!dMap.has(x.id))dMap.set(x.id,x)});cloudDebts=[...dMap.values()].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));cloudDebtsReady=true;localSaveDebts(cloudDebts);if(localDebts.some(x=>!remoteDebts.some(r=>r.id===x.id)))await upsertDebts(localDebts.filter(x=>!remoteDebts.some(r=>r.id===x.id)));renderSummary();renderHistory();renderDebts();if(typeof renderManagerShifts==='function')renderManagerShifts();if(typeof window.refreshQuickRevenueSummary==='function')window.refreshQuickRevenueSummary()}catch(err){console.error('Không thể tải dữ liệu dùng chung:',err)}finally{syncingSharedData=false}}
 
-    const localHistory=localReadHistory().filter(x=>!deletedShiftIds.has(String(x.id)));
-    const remoteHistory=(historyRows||[]).map(rowToHistory).filter(x=>!deletedShiftIds.has(String(x.id)));
-    const hMap=new Map(remoteHistory.map(x=>[x.id,x]));
-    localHistory.forEach(x=>{if(!hMap.has(x.id))hMap.set(x.id,x)});
-    cloudHistory=[...hMap.values()].sort((a,b)=>new Date(b.startAt)-new Date(a.startAt));cloudHistoryReady=true;localSaveHistory(cloudHistory);
-    if(localHistory.some(x=>!remoteHistory.some(r=>r.id===x.id)))await upsertHistory(localHistory.filter(x=>!remoteHistory.some(r=>r.id===x.id)));
+syncSharedData();setInterval(syncSharedData,2500);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncSharedData()});window.addEventListener('focus',syncSharedData);
 
-    const localDebts=localReadDebts();
-    const remoteDebts=(debtRows||[]).map(rowToDebt);
-    const dMap=new Map(remoteDebts.map(x=>[x.id,x]));
-    localDebts.forEach(x=>{if(!dMap.has(x.id))dMap.set(x.id,x)});
-    cloudDebts=[...dMap.values()].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));cloudDebtsReady=true;localSaveDebts(cloudDebts);
-    if(localDebts.some(x=>!remoteDebts.some(r=>r.id===x.id)))await upsertDebts(localDebts.filter(x=>!remoteDebts.some(r=>r.id===x.id)));
-
-    renderSummary();renderHistory();renderDebts();
-    if(typeof renderManagerShifts==='function')renderManagerShifts();
-    if(typeof window.refreshQuickRevenueSummary==='function')window.refreshQuickRevenueSummary();
-  }catch(err){console.error('Không thể tải dữ liệu dùng chung:',err)}
-  finally{syncingSharedData=false}
-}
-
-syncSharedData();
-setInterval(syncSharedData,2500);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncSharedData()});
-window.addEventListener('focus',syncSharedData);
-
-const managerScript=document.createElement('script');
-managerScript.src='./admin.js?v=17';
-document.body.appendChild(managerScript);
-
-const liveShiftScript=document.createElement('script');
-liveShiftScript.src='./live-shift.js?v=17';
-document.body.appendChild(liveShiftScript);
-
-const quickRevenueScript=document.createElement('script');
-quickRevenueScript.src='./quick-revenue.js?v=17';
-document.body.appendChild(quickRevenueScript);
+const managerScript=document.createElement('script');managerScript.src='./admin.js?v=18';document.body.appendChild(managerScript);
+const liveShiftScript=document.createElement('script');liveShiftScript.src='./live-shift.js?v=18';document.body.appendChild(liveShiftScript);
+const quickRevenueScript=document.createElement('script');quickRevenueScript.src='./quick-revenue.js?v=18';document.body.appendChild(quickRevenueScript);
