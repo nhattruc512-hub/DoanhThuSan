@@ -27,6 +27,7 @@ function getActive(){try{return JSON.parse(localStorage.getItem(STORAGE.active)|
 function setActive(value){value?localStorage.setItem(STORAGE.active,JSON.stringify(value)):localStorage.removeItem(STORAGE.active)}
 function parseMoney(value){return Number(String(value||'').replace(/\D/g,''))||0}
 function formatMoneyInput(el){const n=parseMoney(el.value);el.value=n?new Intl.NumberFormat('vi-VN').format(n):''}
+function setMoneyInput(id,value){const el=$(id);if(el)el.value=Number(value||0)?new Intl.NumberFormat('vi-VN').format(Number(value||0)):''}
 function toast(message){const t=$('toast');t.textContent=message;t.classList.add('show');clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove('show'),2600)}
 function escapeHtml(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 
@@ -45,7 +46,16 @@ function beginShift(){
   if(getActive())return toast('Đang có một ca chưa kết thúc');
   const shift=SHIFTS[selectedShift];
   const now=new Date();
-  const record={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),shiftKey:shift.key,shiftName:shift.name,scheduledTime:shift.time,employee,startAt:now.toISOString(),dateKey:localDateKey(now)};
+  const record={
+    id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),
+    shiftKey:shift.key,
+    shiftName:shift.name,
+    scheduledTime:shift.time,
+    employee,
+    startAt:now.toISOString(),
+    dateKey:localDateKey(now),
+    draft:{transfer:0,cash:0,courtRevenue:0,waterRevenue:0}
+  };
   localStorage.setItem(STORAGE.employee,employee);
   setActive(record);
   selectedShift=null;
@@ -60,6 +70,12 @@ function renderActive(){
   const shift=SHIFTS[active.shiftKey]||{name:active.shiftName,time:active.scheduledTime};
   $('activeShiftName').textContent=shift.name;
   $('activeShiftMeta').textContent=`${active.employee} · ${shift.time} · bắt đầu thực tế ${vnTime(active.startAt)}`;
+  const d=active.draft||{};
+  setMoneyInput('liveTransfer',d.transfer);
+  setMoneyInput('liveCash',d.cash);
+  setMoneyInput('liveCourt',d.courtRevenue);
+  setMoneyInput('liveWater',d.waterRevenue);
+  updateLiveTotals();
   updateElapsed(active.startAt);
   clearInterval(elapsedTimer);elapsedTimer=setInterval(()=>updateElapsed(active.startAt),1000);
 }
@@ -68,10 +84,34 @@ function updateElapsed(startAt){
   const total=Math.floor(ms/1000),h=Math.floor(total/3600),m=Math.floor((total%3600)/60),s=total%60;
   $('elapsedTime').textContent=[h,m,s].map(x=>String(x).padStart(2,'0')).join(':');
 }
+function updateLiveTotals(){
+  const transfer=parseMoney($('liveTransfer')?.value),cash=parseMoney($('liveCash')?.value),court=parseMoney($('liveCourt')?.value),water=parseMoney($('liveWater')?.value);
+  const collected=transfer+cash,revenue=court+water,difference=collected-revenue;
+  $('liveCollectedTotal').textContent=money(collected);
+  $('liveRevenueTotal').textContent=money(revenue);
+  $('liveDifferenceTotal').textContent=money(difference);
+  $('liveDifferenceTotal').className=difference<0?'negative':difference>0?'positive':'';
+}
+function saveLiveDraft(){
+  const active=getActive();if(!active)return;
+  active.draft={
+    transfer:parseMoney($('liveTransfer').value),
+    cash:parseMoney($('liveCash').value),
+    courtRevenue:parseMoney($('liveCourt').value),
+    waterRevenue:parseMoney($('liveWater').value)
+  };
+  setActive(active);
+  updateLiveTotals();
+}
 function openEndDialog(){
   const active=getActive();if(!active)return;
+  const d=active.draft||{};
   $('endDialogTitle').textContent=`Kết thúc ${active.shiftName} · ${active.employee}`;
-  ['transferAmount','cashAmount','courtRevenue','waterRevenue','shiftNote'].forEach(id=>$(id).value='');
+  setMoneyInput('transferAmount',d.transfer);
+  setMoneyInput('cashAmount',d.cash);
+  setMoneyInput('courtRevenue',d.courtRevenue);
+  setMoneyInput('waterRevenue',d.waterRevenue);
+  $('shiftNote').value='';
   updateReconcile();
   $('endShiftDialog').showModal();
 }
@@ -89,6 +129,7 @@ function finishShift(e){
   const collected=transfer+cash,revenue=court+water,difference=collected-revenue;
   if(!confirm(`Xác nhận kết thúc ${active.shiftName}?\nTổng doanh thu: ${money(revenue)}\nChênh lệch: ${money(difference)}`))return;
   const completed={...active,endAt:new Date().toISOString(),transfer,cash,courtRevenue:court,waterRevenue:water,collectedTotal:collected,revenueTotal:revenue,difference,note:$('shiftNote').value.trim(),status:'completed'};
+  delete completed.draft;
   const history=readHistory();history.unshift(completed);saveHistory(history);setActive(null);closeEndDialog();render();toast(`Đã kết thúc ${active.shiftName}`);
 }
 
@@ -132,6 +173,7 @@ function setup(){
   document.querySelectorAll('.shift-option').forEach(btn=>btn.addEventListener('click',()=>selectShift(btn.dataset.shift)));
   $('employeeName').addEventListener('input',updateStartButton);$('startShiftBtn').addEventListener('click',beginShift);$('openEndShiftBtn').addEventListener('click',openEndDialog);$('closeDialogBtn').addEventListener('click',closeEndDialog);$('endShiftForm').addEventListener('submit',finishShift);
   document.querySelectorAll('.money-input').forEach(el=>{el.addEventListener('input',()=>{formatMoneyInput(el);updateReconcile()});el.addEventListener('focus',()=>el.select())});
+  document.querySelectorAll('.live-money-input').forEach(el=>{el.addEventListener('input',()=>{formatMoneyInput(el);saveLiveDraft()});el.addEventListener('focus',()=>el.select())});
   $('summaryDate').addEventListener('change',renderSummary);$('historyDate').addEventListener('change',renderHistory);$('historyShift').addEventListener('change',renderHistory);$('exportBtn').addEventListener('click',exportCsv);
   $('endShiftDialog').addEventListener('click',e=>{if(e.target===$('endShiftDialog'))closeEndDialog()});
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('installBtn').classList.remove('hidden')});
