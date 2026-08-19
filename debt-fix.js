@@ -1,7 +1,7 @@
 // Customer debt hotfix + shared cloud sync for completed shifts and debts.
 const CLOUD_URL='https://dinqlgaveujdeyisgpty.supabase.co';
-const CLOUD_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdWJhYmFzZSIsInJlZiI6ImRpbnFsZ2F2ZXVqZGV5aXNncHR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxMjQxNzAsImV4cCI6MjEwMjcwMDE3MH0.L5aitJLmaGC4yopIzjwkQomwQ0H9dSOfNWqvAgwrzQI';
-const cloudHeaders={apikey:CLOUD_KEY,Authorization:`Bearer ${CLOUD_KEY}`,'Content-Type':'application/json'};
+const CLOUD_KEY='sb_publishable_xFCEf-YDU-F8PJfuoxHD-Q_NlFAWl9N';
+const cloudHeaders={apikey:CLOUD_KEY,'Content-Type':'application/json'};
 
 const localReadHistory=readHistory;
 const localSaveHistory=saveHistory;
@@ -33,11 +33,10 @@ async function syncSharedData(){try{const [historyRows,debtRows,deletedRows]=awa
 
 syncSharedData();setInterval(syncSharedData,30000);
 
-// Force-load the newest manager script so older installed app caches do not hide attendance delete controls.
 const managerScript=document.createElement('script');
-managerScript.src='./admin.js?v=13';
+managerScript.src='./admin.js?v=15';
 document.body.appendChild(managerScript);
 
 const liveShiftScript=document.createElement('script');
-liveShiftScript.src='./live-shift.js?v=13';
+liveShiftScript.src='./live-shift.js?v=15';
 document.body.appendChild(liveShiftScript);
