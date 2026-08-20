@@ -25,33 +25,17 @@
 
   <main class="container main-grid">
     <section id="activeShiftCard" class="card active-card hidden" aria-live="polite">
-      <div class="card-head">
-        <div>
-          <p class="section-kicker">CA ĐANG HOẠT ĐỘNG</p>
-          <h2 id="activeShiftName">Ca 1</h2>
-          <p id="activeShiftMeta" class="muted"></p>
-        </div>
-        <span class="status-dot">Đang làm</span>
-      </div>
-
-      <div class="elapsed-box">
-        <span>Thời gian đã làm</span>
-        <strong id="elapsedTime">00:00:00</strong>
-      </div>
-
+      <div class="card-head"><div><p class="section-kicker">CA ĐANG HOẠT ĐỘNG</p><h2 id="activeShiftName">Ca 1</h2><p id="activeShiftMeta" class="muted"></p></div><span class="status-dot">Đang làm</span></div>
+      <div class="elapsed-box"><span>Thời gian đã làm</span><strong id="elapsedTime">00:00:00</strong></div>
       <div style="margin-top:18px">
-        <p class="section-kicker">GHI NHẬN THÊM DOANH THU</p>
-        <p class="muted" style="margin-top:4px">Mỗi khi có khoản thu, nhập số tiền vào đúng mục rồi bấm <b>Cộng vào ca</b>. Có thể nhập nhiều lần trong một ca.</p>
-
+        <p class="section-kicker">GHI NHẬN THÊM DOANH THU</p><p class="muted" style="margin-top:4px">Mỗi khi có khoản thu, nhập số tiền vào đúng mục rồi bấm <b>Cộng vào ca</b>. Có thể nhập nhiều lần trong một ca.</p>
         <div class="money-grid" style="margin-top:12px">
           <label><span>🏦 Chuyển khoản</span><input id="entryTransfer" class="input entry-money-input" inputmode="numeric" placeholder="Nhập thêm" /></label>
           <label><span>💵 Tiền mặt</span><input id="entryCash" class="input entry-money-input" inputmode="numeric" placeholder="Nhập thêm" /></label>
           <label><span>🏸 Doanh thu sân</span><input id="entryCourt" class="input entry-money-input" inputmode="numeric" placeholder="Nhập thêm" /></label>
           <label><span>🥤 Doanh thu nước</span><input id="entryWater" class="input entry-money-input" inputmode="numeric" placeholder="Nhập thêm" /></label>
         </div>
-
         <button id="addEntryBtn" class="btn btn-primary btn-block" type="button">+ CỘNG VÀO CA</button>
-
         <div style="margin-top:18px">
           <p class="section-kicker">TỔNG ĐÃ GHI NHẬN TRONG CA</p>
           <div class="summary-grid" style="margin-top:10px">
@@ -60,89 +44,44 @@
             <div class="summary-item"><span>Doanh thu sân</span><strong id="liveCourtTotal">0 ₫</strong></div>
             <div class="summary-item"><span>Doanh thu nước</span><strong id="liveWaterTotal">0 ₫</strong></div>
           </div>
-          <div class="reconcile-box" style="margin-top:12px">
-            <div><span>Tổng tiền thu</span><b id="liveCollectedTotal">0 ₫</b></div>
-            <div><span>Tổng doanh thu</span><b id="liveRevenueTotal">0 ₫</b></div>
-            <div class="difference-row"><span>Chênh lệch</span><b id="liveDifferenceTotal">0 ₫</b></div>
-          </div>
+          <div class="reconcile-box" style="margin-top:12px"><div><span>Tổng tiền thu</span><b id="liveCollectedTotal">0 ₫</b></div><div><span>Tổng doanh thu</span><b id="liveRevenueTotal">0 ₫</b></div><div class="difference-row"><span>Chênh lệch</span><b id="liveDifferenceTotal">0 ₫</b></div></div>
         </div>
-
-        <div style="margin-top:18px">
-          <div class="card-head compact" style="margin-bottom:8px"><div><p class="section-kicker">LỊCH SỬ NHẬP TRONG CA</p><p class="muted" style="margin-top:3px">Có thể xóa khoản nhập nhầm.</p></div></div>
-          <div id="entryList"></div>
-          <div id="emptyEntryList" class="empty-state" style="padding:18px 8px"><b>Chưa ghi nhận khoản nào</b></div>
-        </div>
+        <div style="margin-top:18px"><div class="card-head compact" style="margin-bottom:8px"><div><p class="section-kicker">LỊCH SỬ NHẬP TRONG CA</p><p class="muted" style="margin-top:3px">Có thể xóa khoản nhập nhầm.</p></div></div><div id="entryList"></div><div id="emptyEntryList" class="empty-state" style="padding:18px 8px"><b>Chưa ghi nhận khoản nào</b></div></div>
       </div>
-
       <button id="openEndShiftBtn" class="btn btn-danger btn-block" type="button">KẾT THÚC CA</button>
     </section>
 
     <section id="startShiftCard" class="card">
       <div class="card-head"><div><p class="section-kicker">BẮT ĐẦU LÀM VIỆC</p><h2>Chọn ca</h2><p class="muted">Mỗi thời điểm chỉ có thể mở 1 ca.</p></div></div>
-      <label class="field-label" for="employeeName">Tên nhân viên</label>
-      <input id="employeeName" class="input" type="text" maxlength="60" autocomplete="name" placeholder="Nhập tên nhân viên" />
-      <div class="shift-grid" id="shiftGrid">
-        <button class="shift-option" type="button" data-shift="ca1"><span class="shift-number">1</span><span><b>Ca 1</b><small>05:00 - 11:00</small></span></button>
-        <button class="shift-option" type="button" data-shift="ca2"><span class="shift-number">2</span><span><b>Ca 2</b><small>14:00 - 18:00</small></span></button>
-        <button class="shift-option" type="button" data-shift="ca3"><span class="shift-number">3</span><span><b>Ca 3</b><small>18:00 - 22:00</small></span></button>
-      </div>
+      <label class="field-label" for="employeeName">Tên nhân viên</label><input id="employeeName" class="input" type="text" maxlength="60" autocomplete="name" placeholder="Nhập tên nhân viên" />
+      <div class="shift-grid" id="shiftGrid"><button class="shift-option" type="button" data-shift="ca1"><span class="shift-number">1</span><span><b>Ca 1</b><small>05:00 - 11:00</small></span></button><button class="shift-option" type="button" data-shift="ca2"><span class="shift-number">2</span><span><b>Ca 2</b><small>14:00 - 18:00</small></span></button><button class="shift-option" type="button" data-shift="ca3"><span class="shift-number">3</span><span><b>Ca 3</b><small>18:00 - 22:00</small></span></button></div>
       <button id="startShiftBtn" class="btn btn-primary btn-block" type="button" disabled>BẮT ĐẦU CA</button>
     </section>
 
     <section class="card">
       <div class="card-head compact"><div><p class="section-kicker">TỔNG HỢP NGÀY</p><h2 id="summaryDateTitle">Hôm nay</h2></div><input id="summaryDate" class="date-input" type="date" /></div>
-      <div class="summary-grid">
-        <div class="summary-item"><span>Chuyển khoản</span><strong id="sumTransfer">0 ₫</strong></div>
-        <div class="summary-item"><span>Tiền mặt</span><strong id="sumCash">0 ₫</strong></div>
-        <div class="summary-item"><span>Doanh thu sân</span><strong id="sumCourt">0 ₫</strong></div>
-        <div class="summary-item"><span>Doanh thu nước</span><strong id="sumWater">0 ₫</strong></div>
-      </div>
+      <div class="summary-grid"><div class="summary-item"><span>Chuyển khoản</span><strong id="sumTransfer">0 ₫</strong></div><div class="summary-item"><span>Tiền mặt</span><strong id="sumCash">0 ₫</strong></div><div class="summary-item"><span>Doanh thu sân</span><strong id="sumCourt">0 ₫</strong></div><div class="summary-item"><span>Doanh thu nước</span><strong id="sumWater">0 ₫</strong></div></div>
       <div class="grand-total"><span>TỔNG DOANH THU</span><strong id="sumRevenue">0 ₫</strong></div>
     </section>
 
     <section class="card debt-card">
-      <div class="card-head compact">
-        <div><p class="section-kicker">KHÁCH NỢ</p><h2>Theo dõi công nợ khách</h2><p class="muted">Có thể thêm khách nợ ngay cả khi chưa mở ca. Nếu đang trong ca, web sẽ tự ghi nhận nhân viên và ca.</p></div>
-        <div style="text-align:right"><small class="muted">TỔNG ĐANG NỢ</small><div id="debtGrandTotal" style="font-size:22px;font-weight:900;margin-top:4px">0 ₫</div></div>
-      </div>
-      <div class="money-grid" style="margin-top:12px">
-        <label><span>👤 Tên khách</span><input id="debtCustomer" class="input" type="text" maxlength="80" placeholder="Nhập tên khách" /></label>
-        <label><span>📝 Nợ gì</span><input id="debtReason" class="input" type="text" maxlength="160" placeholder="Ví dụ: tiền sân, nước..." /></label>
-        <label><span>💰 Tổng nợ</span><input id="debtAmount" class="input debt-money-input" inputmode="numeric" placeholder="0" /></label>
-      </div>
-      <button id="addDebtBtn" class="btn btn-primary btn-block" type="button">+ THÊM KHÁCH NỢ</button>
-      <div id="debtList" style="margin-top:14px"></div>
-      <div id="emptyDebtList" class="empty-state" style="padding:18px 8px"><b>Chưa có khách nợ</b><p>Các khoản nợ chưa thanh toán sẽ xuất hiện ở đây.</p></div>
+      <div class="card-head compact"><div><p class="section-kicker">KHÁCH NỢ</p><h2>Theo dõi công nợ khách</h2><p class="muted">Có thể thêm khách nợ ngay cả khi chưa mở ca. Nếu đang trong ca, web sẽ tự ghi nhận nhân viên và ca.</p></div><div style="text-align:right"><small class="muted">TỔNG ĐANG NỢ</small><div id="debtGrandTotal" style="font-size:22px;font-weight:900;margin-top:4px">0 ₫</div></div></div>
+      <div class="money-grid" style="margin-top:12px"><label><span>👤 Tên khách</span><input id="debtCustomer" class="input" type="text" maxlength="80" placeholder="Nhập tên khách" /></label><label><span>📝 Nợ gì</span><input id="debtReason" class="input" type="text" maxlength="160" placeholder="Ví dụ: tiền sân, nước..." /></label><label><span>💰 Tổng nợ</span><input id="debtAmount" class="input debt-money-input" inputmode="numeric" placeholder="0" /></label></div>
+      <button id="addDebtBtn" class="btn btn-primary btn-block" type="button">+ THÊM KHÁCH NỢ</button><div id="debtList" style="margin-top:14px"></div><div id="emptyDebtList" class="empty-state" style="padding:18px 8px"><b>Chưa có khách nợ</b><p>Các khoản nợ chưa thanh toán sẽ xuất hiện ở đây.</p></div>
     </section>
 
     <section class="card history-card">
       <div class="card-head compact"><div><p class="section-kicker">LỊCH SỬ CA</p><h2>Theo dõi đối soát</h2></div><button id="exportBtn" class="btn btn-secondary" type="button">Xuất CSV</button></div>
-      <div class="filters"><input id="historyDate" class="input" type="date" /><select id="historyShift" class="input"><option value="all">Tất cả ca</option><option value="ca1">Ca 1</option><option value="ca2">Ca 2</option><option value="ca3">Ca 3</option></select></div>
-      <div id="historyList" class="history-list"></div>
-      <div id="emptyHistory" class="empty-state hidden"><div class="empty-icon">📋</div><b>Chưa có dữ liệu ca</b><p>Ca đã kết thúc sẽ xuất hiện ở đây.</p></div>
+      <div class="filters"><input id="historyDate" class="input" type="date" /><select id="historyShift" class="input"><option value="all">Tất cả ca</option><option value="ca1">Ca 1</option><option value="ca2">Ca 2</option><option value="ca3">Ca 3</option></select></div><div id="historyList" class="history-list"></div><div id="emptyHistory" class="empty-state hidden"><div class="empty-icon">📋</div><b>Chưa có dữ liệu ca</b><p>Ca đã kết thúc sẽ xuất hiện ở đây.</p></div>
     </section>
   </main>
 
-  <dialog id="endShiftDialog" class="dialog">
-    <form id="endShiftForm" method="dialog">
-      <div class="dialog-head"><div><p class="section-kicker">TỔNG KẾT CUỐI CA</p><h2 id="endDialogTitle">Kết thúc ca</h2></div><button id="closeDialogBtn" class="icon-btn" type="button" aria-label="Đóng">×</button></div>
-      <p class="muted">Các số dưới đây đã được web tự cộng từ những lần nhân viên ghi nhận trong ca.</p>
-      <div class="money-grid" style="margin-top:12px">
-        <label><span>🏦 Chuyển khoản</span><input id="transferAmount" class="input" inputmode="numeric" readonly /></label>
-        <label><span>💵 Tiền mặt</span><input id="cashAmount" class="input" inputmode="numeric" readonly /></label>
-        <label><span>🏸 Doanh thu sân</span><input id="courtRevenue" class="input" inputmode="numeric" readonly /></label>
-        <label><span>🥤 Doanh thu nước</span><input id="waterRevenue" class="input" inputmode="numeric" readonly /></label>
-      </div>
-      <label class="field-label" for="shiftNote">Ghi chú cuối ca</label>
-      <textarea id="shiftNote" class="input textarea" rows="3" maxlength="300" placeholder="Ví dụ: khách chuyển khoản trễ, có khoản điều chỉnh..."></textarea>
-      <div class="reconcile-box"><div><span>Tổng tiền thu</span><b id="collectedTotal">0 ₫</b></div><div><span>Tổng doanh thu</span><b id="revenueTotal">0 ₫</b></div><div class="difference-row"><span>Chênh lệch</span><b id="differenceTotal">0 ₫</b></div></div>
-      <button id="finishShiftBtn" class="btn btn-danger btn-block" type="submit">XÁC NHẬN KẾT THÚC CA</button>
-    </form>
-  </dialog>
+  <dialog id="endShiftDialog" class="dialog"><form id="endShiftForm" method="dialog"><div class="dialog-head"><div><p class="section-kicker">TỔNG KẾT CUỐI CA</p><h2 id="endDialogTitle">Kết thúc ca</h2></div><button id="closeDialogBtn" class="icon-btn" type="button" aria-label="Đóng">×</button></div><p class="muted">Các số dưới đây đã được web tự cộng từ những lần nhân viên ghi nhận trong ca.</p><div class="money-grid" style="margin-top:12px"><label><span>🏦 Chuyển khoản</span><input id="transferAmount" class="input" inputmode="numeric" readonly /></label><label><span>💵 Tiền mặt</span><input id="cashAmount" class="input" inputmode="numeric" readonly /></label><label><span>🏸 Doanh thu sân</span><input id="courtRevenue" class="input" inputmode="numeric" readonly /></label><label><span>🥤 Doanh thu nước</span><input id="waterRevenue" class="input" inputmode="numeric" readonly /></label></div><label class="field-label" for="shiftNote">Ghi chú cuối ca</label><textarea id="shiftNote" class="input textarea" rows="3" maxlength="300" placeholder="Ví dụ: khách chuyển khoản trễ, có khoản điều chỉnh..."></textarea><div class="reconcile-box"><div><span>Tổng tiền thu</span><b id="collectedTotal">0 ₫</b></div><div><span>Tổng doanh thu</span><b id="revenueTotal">0 ₫</b></div><div class="difference-row"><span>Chênh lệch</span><b id="differenceTotal">0 ₫</b></div></div><button id="finishShiftBtn" class="btn btn-danger btn-block" type="submit">XÁC NHẬN KẾT THÚC CA</button></form></dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="app.js"></script>
   <script src="debt-fix.js"></script>
   <script src="attendance.js"></script>
+  <script src="attendance-delete-mode.js?v=19"></script>
 </body>
 </html>
