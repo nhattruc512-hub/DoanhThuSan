@@ -1,5 +1,5 @@
-const CACHE='r971-staff-v18';
-const ASSETS=['./','./index.html','./styles.css','./app.js','./debt-fix.js','./admin.js','./live-shift.js','./attendance.js','./quick-revenue.js','./manifest.webmanifest','./icon.svg'];
+const CACHE='r971-staff-v19';
+const ASSETS=['./','./index.html','./styles.css','./app.js','./debt-fix.js','./admin.js','./live-shift.js','./attendance.js','./quick-revenue.js','./attendance-delete-mode.js','./manifest.webmanifest','./icon.svg'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
